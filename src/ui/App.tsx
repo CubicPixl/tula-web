@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import maplibregl, { Marker } from 'maplibre-gl'
 
 type Item = {
   id: number
@@ -15,10 +15,35 @@ type Item = {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
+const FALLBACK_ARTISANS: Item[] = [
+  {
+    id: 1,
+    name: 'Artesanías de obsidiana',
+    description: 'Tallado tradicional con piedra volcánica de la región.',
+    category: 'Artesano',
+    lat: 20.0568,
+    lng: -99.3391,
+    photo_url: ''
+  }
+]
+
+const FALLBACK_PLACES: Item[] = [
+  {
+    id: 1,
+    name: 'Zona Arqueológica de Tula',
+    description: 'Hogar de los Atlantes de Tula y centro ceremonial tolteca.',
+    type: 'Zona arqueológica',
+    lat: 20.0624,
+    lng: -99.3374,
+    photo_url: ''
+  }
+]
+
 export default function App(){
   const [artisans, setArtisans] = useState<Item[]>([])
   const [places, setPlaces] = useState<Item[]>([])
   const [q, setQ] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement | null>(null)
   const map = useRef<maplibregl.Map | null>(null)
 
@@ -32,8 +57,44 @@ export default function App(){
   }, [artisans, places, q])
 
   useEffect(() => {
-    fetch(`${API_URL}/artisans`).then(r=>r.json()).then(setArtisans).catch(console.error)
-    fetch(`${API_URL}/places`).then(r=>r.json()).then(setPlaces).catch(console.error)
+    let cancelled = false
+
+    async function loadData(){
+      try {
+        const [artisansRes, placesRes] = await Promise.all([
+          fetch(`${API_URL}/artisans`),
+          fetch(`${API_URL}/places`)
+        ])
+
+        if(!artisansRes.ok || !placesRes.ok){
+          throw new Error('Respuesta no válida del servidor')
+        }
+
+        const [artisanData, placeData] = await Promise.all([
+          artisansRes.json(),
+          placesRes.json()
+        ])
+
+        if(!cancelled){
+          setArtisans(Array.isArray(artisanData) ? artisanData : [])
+          setPlaces(Array.isArray(placeData) ? placeData : [])
+          setError(null)
+        }
+      } catch (err) {
+        console.debug('No se pudieron cargar los datos remotos', err)
+        if(!cancelled){
+          setArtisans(FALLBACK_ARTISANS)
+          setPlaces(FALLBACK_PLACES)
+          setError('No se pudieron cargar los datos en vivo. Mostrando información de ejemplo.')
+        }
+      }
+    }
+
+    loadData()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -48,7 +109,7 @@ export default function App(){
   }, [])
 
   useEffect(() => {
-    if(!map.current) return
+    if(!map.current || !(map.current instanceof maplibregl.Map)) return
     // clear existing markers by storing them in map instance
     // @ts-ignore
     if(map.current._customMarkers){ (map.current as any)._customMarkers.forEach((m:any)=>m.remove()) }
@@ -61,12 +122,19 @@ export default function App(){
       el.style.width = '14px'; el.style.height='14px'; el.style.borderRadius='50%'
       el.style.background = i.kind === 'Artesano' ? '#0ea5e9' : '#22c55e'
       el.style.border = '2px solid white'
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([i.lng, i.lat])
-        .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(`<strong>${i.name}</strong><br/>${i.kind}`))
-        .addTo(map.current!)
-      // @ts-ignore
-      (map.current as any)._customMarkers.push(marker)
+      try {
+        const marker = new Marker({ element: el })
+        if(typeof (marker as any).addTo !== 'function'){
+          console.debug('Instancia de marcador inválida recibida', marker)
+          return
+        }
+        marker.setLngLat([i.lng, i.lat])
+        marker.addTo(map.current!)
+        // @ts-ignore
+        (map.current as any)._customMarkers.push(marker)
+      } catch (err) {
+        console.debug('No se pudo crear un marcador en el mapa', err)
+      }
     })
   }, [items])
 
@@ -83,16 +151,21 @@ export default function App(){
       </div>
       <div className="container">
         <div className="sidebar">
-          {items.map((it:any) => (
-            <div key={`${it.kind}-${it.id}`} className="item" onClick={()=>focus(it)}>
-              <div style={{display:'flex',justifyContent:'space-between'}}>
-                <strong>{it.name}</strong>
-                <span className="badge">{it.kind}</span>
+          {error && <div className="message warning">{error}</div>}
+          {items.length === 0 ? (
+            <div className="message">No se encontraron resultados.</div>
+          ) : (
+            items.map((it:any) => (
+              <div key={`${it.kind}-${it.id}`} className="item" onClick={()=>focus(it)}>
+                <div style={{display:'flex',justifyContent:'space-between'}}>
+                  <strong>{it.name}</strong>
+                  <span className="badge">{it.kind}</span>
+                </div>
+                <div style={{fontSize:12, color:'#666'}}>{it.category || it.type}</div>
+                <div style={{fontSize:12}}>{it.description}</div>
               </div>
-              <div style={{fontSize:12, color:'#666'}}>{it.category || it.type}</div>
-              <div style={{fontSize:12}}>{it.description}</div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
         <div className="map">
           <div ref={mapRef} className="mapCanvas" />
