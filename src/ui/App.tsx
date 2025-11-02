@@ -1,6 +1,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl, { Marker } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 type Item = {
   id: number
