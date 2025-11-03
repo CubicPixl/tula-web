@@ -65,6 +65,8 @@ textarea { resize: vertical; }
 .map-popup p { margin: 0; font-size: 13px; line-height: 1.5; color: #334155; }
 .footer { position: absolute; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.8); color: #e2e8f0; padding: 12px 18px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25); font-size: 13px; }
 .footer strong { color: #38bdf8; }
+.footer__content { display: flex; flex-direction: column; gap: 6px; }
+.footer__notice { font-size: 12px; color: #bfdbfe; opacity: 0.85; }
 
 .superAdminPage { min-height: 100vh; display: flex; flex-direction: column; background: radial-gradient(140% 140% at 50% 0%, #0f172a 0%, #0b1120 70%, #111827 100%); color: #e2e8f0; }
 .superAdminHeader { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; gap: 20px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(148, 163, 184, 0.12); position: sticky; top: 0; z-index: 10; }
@@ -131,6 +133,7 @@ button.secondary:hover { background: rgba(148, 163, 184, 0.28); }
 .superAdminMapCanvas { position: relative; flex: 1; width: 100%; height: 100%; border-radius: 0 0 0 0; overflow: hidden; }
 .superAdminMapOverlay { position: absolute; bottom: 32px; left: 32px; max-width: 320px; background: rgba(15, 23, 42, 0.88); padding: 18px 20px; border-radius: 18px; box-shadow: 0 20px 45px rgba(8, 47, 73, 0.45); color: #e2e8f0; font-size: 13px; line-height: 1.5; }
 .superAdminMapOverlay strong { display: block; font-size: 15px; margin-bottom: 6px; color: #f8fafc; }
+.superAdminMapNotice { margin: 12px 0 0; font-size: 12px; color: #93c5fd; line-height: 1.5; }
 
 .map-marker.place.active { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35); transform: scale(1.1); }
 

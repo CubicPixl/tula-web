@@ -23,6 +23,12 @@ type PlaceForm = {
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const MAP_STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL || 'https://demotiles.maplibre.org/style.json'
+const MAP_CENTER: [number, number] = [-99.3389, 20.0617]
+const FALLBACK_BOUNDS = {
+  lat: [19.95, 20.18],
+  lng: [-99.45, -99.2]
+}
 
 const FALLBACK_ARTISANS: Item[] = [
   {
@@ -61,6 +67,157 @@ function createEmptyPlaceForm(): PlaceForm {
   return { ...EMPTY_PLACE_FORM }
 }
 
+type MapStyleResult = {
+  style: string | maplibregl.StyleSpecification
+  isFallback: boolean
+}
+
+let cachedStylePromise: Promise<MapStyleResult> | null = null
+
+function getFallbackGrid(){
+  const features: any[] = []
+  const step = 0.025
+  for(let lat = FALLBACK_BOUNDS.lat[0]; lat <= FALLBACK_BOUNDS.lat[1]; lat = parseFloat((lat + step).toFixed(6))){
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [FALLBACK_BOUNDS.lng[0], lat],
+          [FALLBACK_BOUNDS.lng[1], lat]
+        ]
+      },
+      properties: {
+        orientation: 'horizontal',
+        lat
+      }
+    })
+  }
+
+  for(let lng = FALLBACK_BOUNDS.lng[0]; lng <= FALLBACK_BOUNDS.lng[1]; lng = parseFloat((lng + step).toFixed(6))){
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [lng, FALLBACK_BOUNDS.lat[0]],
+          [lng, FALLBACK_BOUNDS.lat[1]]
+        ]
+      },
+      properties: {
+        orientation: 'vertical',
+        lng
+      }
+    })
+  }
+
+  return {
+    type: 'FeatureCollection' as const,
+    features
+  }
+}
+
+function getFallbackHighlight(){
+  const padding = 0.02
+  const polygon = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[
+        [FALLBACK_BOUNDS.lng[0] + padding, FALLBACK_BOUNDS.lat[0] + padding],
+        [FALLBACK_BOUNDS.lng[1] - padding, FALLBACK_BOUNDS.lat[0] + padding],
+        [FALLBACK_BOUNDS.lng[1] - padding, FALLBACK_BOUNDS.lat[1] - padding],
+        [FALLBACK_BOUNDS.lng[0] + padding, FALLBACK_BOUNDS.lat[1] - padding],
+        [FALLBACK_BOUNDS.lng[0] + padding, FALLBACK_BOUNDS.lat[0] + padding]
+      ]]
+    },
+    properties: {
+      name: 'Zona Tula'
+    }
+  }
+
+  return {
+    type: 'FeatureCollection' as const,
+    features: [polygon]
+  }
+}
+
+const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  name: 'Offline reference',
+  sources: {
+    'tula-grid': {
+      type: 'geojson',
+      data: getFallbackGrid()
+    },
+    'tula-highlight': {
+      type: 'geojson',
+      data: getFallbackHighlight()
+    }
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background',
+      paint: {
+        'background-color': '#cfe6ff'
+      }
+    },
+    {
+      id: 'highlight-fill',
+      type: 'fill',
+      source: 'tula-highlight',
+      paint: {
+        'fill-color': '#93c5fd',
+        'fill-opacity': 0.25
+      }
+    },
+    {
+      id: 'highlight-outline',
+      type: 'line',
+      source: 'tula-highlight',
+      paint: {
+        'line-color': '#1d4ed8',
+        'line-width': 2
+      }
+    },
+    {
+      id: 'grid-lines',
+      type: 'line',
+      source: 'tula-grid',
+      paint: {
+        'line-color': '#8fb9f0',
+        'line-width': 0.8,
+        'line-dasharray': [2, 2]
+      }
+    }
+  ]
+}
+
+async function loadPreferredStyle(): Promise<MapStyleResult> {
+  if(cachedStylePromise) return cachedStylePromise
+
+  cachedStylePromise = (async () => {
+    if(!MAP_STYLE_URL){
+      return { style: FALLBACK_STYLE, isFallback: true }
+    }
+
+    try {
+      const response = await fetch(MAP_STYLE_URL, { mode: 'cors' })
+      if(!response.ok){
+        throw new Error(`Respuesta no válida al cargar el estilo: ${response.status}`)
+      }
+      // No usamos el JSON directamente para evitar referencias relativas rotas.
+      return { style: MAP_STYLE_URL, isFallback: false }
+    } catch (err){
+      console.warn('No se pudo cargar el estilo remoto del mapa, usando modo sin conexión.', err)
+      return { style: FALLBACK_STYLE, isFallback: true }
+    }
+  })()
+
+  return cachedStylePromise
+}
+
 function getRouteFromHash(){
   return window.location.hash === '#/super-admin' ? 'super-admin' : 'public'
 }
@@ -93,6 +250,7 @@ function PublicExplorer({ onOpenAdmin }: PublicExplorerProps){
   const [error, setError] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement | null>(null)
   const mapInstance = useRef<MapLibreMap | null>(null)
+  const [mapStatus, setMapStatus] = useState<string | null>(null)
 
   const items = useMemo(() => {
     const a = artisans.map(a => ({ ...a, kind: 'Artesano' } as const))
@@ -158,29 +316,51 @@ function PublicExplorer({ onOpenAdmin }: PublicExplorerProps){
 
   useEffect(() => {
     if(!mapRef.current || mapInstance.current) return
-    const map = new maplibregl.Map({
-      container: mapRef.current,
-      style: 'https://demotiles.maplibre.org/style.json',
-      center: [-99.3389, 20.0617],
-      zoom: 12
-    })
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    let cancelled = false
+    let localMap: MapLibreMap | null = null
+    let resizeObserver: ResizeObserver | null = null
 
-    const handleResize = () => map.resize()
-    const observerSupported = typeof ResizeObserver !== 'undefined'
-    const resizeObserver = observerSupported && mapRef.current ? new ResizeObserver(handleResize) : null
-    if(resizeObserver && mapRef.current){
-      resizeObserver.observe(mapRef.current)
+    const handleResize = () => {
+      localMap?.resize()
     }
-    window.addEventListener('resize', handleResize)
 
-    mapInstance.current = map
+    loadPreferredStyle()
+      .then(result => {
+        if(cancelled || !mapRef.current) return
+        setMapStatus(result.isFallback ? 'Mapa en modo básico sin conexión. Marcadores mostrados sobre una rejilla de referencia.' : null)
+
+        const map = new maplibregl.Map({
+          container: mapRef.current,
+          style: result.style,
+          center: MAP_CENTER,
+          zoom: 12
+        })
+        localMap = map
+        mapInstance.current = map
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+
+        const observerSupported = typeof ResizeObserver !== 'undefined'
+        if(observerSupported && mapRef.current){
+          resizeObserver = new ResizeObserver(handleResize)
+          resizeObserver.observe(mapRef.current)
+        }
+        window.addEventListener('resize', handleResize)
+      })
+      .catch(err => {
+        console.error('No se pudo inicializar el mapa público', err)
+        if(!cancelled){
+          setMapStatus('No se pudo inicializar el mapa.')
+        }
+      })
 
     return () => {
+      cancelled = true
       window.removeEventListener('resize', handleResize)
       resizeObserver?.disconnect()
-      map.remove()
-      mapInstance.current = null
+      if(localMap){
+        localMap.remove()
+        mapInstance.current = null
+      }
     }
   }, [])
 
@@ -275,8 +455,11 @@ function PublicExplorer({ onOpenAdmin }: PublicExplorerProps){
         <div className="map">
           <div ref={mapRef} className="mapCanvas" />
           <div className="footer">
-            <div>
-              <strong>Consejo:</strong> Da clic en un marcador para ver detalles.
+            <div className="footer__content">
+              <div>
+                <strong>Consejo:</strong> Da clic en un marcador para ver detalles.
+              </div>
+              {mapStatus && <div className="footer__notice">{mapStatus}</div>}
             </div>
             <span>v{__APP_VERSION__}</span>
           </div>
@@ -307,6 +490,7 @@ function SuperAdminView({ onBack }: SuperAdminViewProps){
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
   const selectionMarkerRef = useRef<Marker | null>(null)
+  const [mapStatus, setMapStatus] = useState<string | null>(null)
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
@@ -328,31 +512,56 @@ function SuperAdminView({ onBack }: SuperAdminViewProps){
 
   useEffect(() => {
     if(!mapContainerRef.current || mapRef.current) return
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: 'https://demotiles.maplibre.org/style.json',
-      center: [-99.3389, 20.0617],
-      zoom: 12.5
-    })
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    map.on('click', event => {
-      const { lng, lat } = event.lngLat
-      setForm(prev => ({ ...prev, lat, lng }))
-      setStatusMessage(null)
-    })
-    mapRef.current = map
-    const resize = () => map.resize()
-    const observerSupported = typeof ResizeObserver !== 'undefined'
-    const resizeObserver = observerSupported ? new ResizeObserver(resize) : null
-    if(resizeObserver && mapContainerRef.current){
-      resizeObserver.observe(mapContainerRef.current)
+    let cancelled = false
+    let localMap: MapLibreMap | null = null
+    let resizeObserver: ResizeObserver | null = null
+
+    const handleResize = () => {
+      localMap?.resize()
     }
-    window.addEventListener('resize', resize)
+
+    loadPreferredStyle()
+      .then(result => {
+        if(cancelled || !mapContainerRef.current) return
+        setMapStatus(result.isFallback ? 'Mapa en modo básico sin conexión. Los clics siguen funcionando para elegir coordenadas.' : null)
+
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: result.style,
+          center: MAP_CENTER,
+          zoom: 12.5
+        })
+        localMap = map
+        mapRef.current = map
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+        map.on('click', event => {
+          const { lng, lat } = event.lngLat
+          setForm(prev => ({ ...prev, lat, lng }))
+          setStatusMessage(null)
+        })
+
+        const observerSupported = typeof ResizeObserver !== 'undefined'
+        if(observerSupported && mapContainerRef.current){
+          resizeObserver = new ResizeObserver(handleResize)
+          resizeObserver.observe(mapContainerRef.current)
+        }
+        window.addEventListener('resize', handleResize)
+      })
+      .catch(err => {
+        console.error('No se pudo inicializar el mapa del panel', err)
+        if(!cancelled){
+          setMapStatus('No se pudo inicializar el mapa.')
+        }
+      })
+
     return () => {
-      window.removeEventListener('resize', resize)
+      cancelled = true
+      window.removeEventListener('resize', handleResize)
       resizeObserver?.disconnect()
-      map.remove()
-      mapRef.current = null
+      if(localMap){
+        localMap.remove()
+        mapRef.current = null
+      }
     }
   }, [])
 
@@ -712,6 +921,7 @@ function SuperAdminView({ onBack }: SuperAdminViewProps){
                 <strong>Selecciona la ubicación</strong>
                 <p>Haz clic en cualquier punto para posicionar el pin azul. Puedes moverlo nuevamente con otro clic.</p>
               </div>
+              {mapStatus && <p className="superAdminMapNotice">{mapStatus}</p>}
             </div>
           </section>
         </div>
