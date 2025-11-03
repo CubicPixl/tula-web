@@ -66,31 +66,91 @@ textarea { resize: vertical; }
 .footer { position: absolute; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.8); color: #e2e8f0; padding: 12px 18px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25); font-size: 13px; }
 .footer strong { color: #38bdf8; }
 
-.adminPanel { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; justify-content: flex-end; z-index: 10; }
-.adminPanel__content { width: min(420px, 100%); background: #f8fafc; height: 100%; padding: 32px 28px; display: flex; flex-direction: column; gap: 18px; box-shadow: -10px 0 30px rgba(15, 23, 42, 0.25); overflow-y: auto; }
-.adminPanel__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.adminPanel__header h3 { margin: 0; font-size: 22px; color: #0f172a; }
-.adminPanel__header p { margin: 4px 0 0; font-size: 13px; color: #475569; }
-.closeButton { border: none; background: transparent; color: #64748b; cursor: pointer; font-size: 14px; font-weight: 600; }
-.closeButton:hover { color: #ef4444; }
-.adminMessage { padding: 12px 16px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); color: #1d4ed8; font-size: 13px; }
-.adminForm { display: flex; flex-direction: column; gap: 14px; }
-.adminForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 600; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.superAdminPage { min-height: 100vh; display: flex; flex-direction: column; background: radial-gradient(140% 140% at 50% 0%, #0f172a 0%, #0b1120 70%, #111827 100%); color: #e2e8f0; }
+.superAdminHeader { padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; gap: 20px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(148, 163, 184, 0.12); position: sticky; top: 0; z-index: 10; }
+.superAdminHeaderBrand h1 { margin: 0; font-size: 28px; color: #f8fafc; }
+.superAdminHeaderBrand p { margin: 4px 0 0; font-size: 14px; color: #94a3b8; }
+.superAdminHeaderActions { display: flex; align-items: center; gap: 12px; }
+.superAdminHeaderActions .ghostButton { border-color: rgba(148, 163, 184, 0.45); color: #e0f2fe; }
+.superAdminHeaderActions .ghostButton:hover { background: rgba(148, 163, 184, 0.2); color: #bfdbfe; }
+
+.superAdminLogin { flex: 1; display: flex; align-items: center; justify-content: center; padding: 56px 16px 72px; }
+.superAdminLoginCard { width: min(420px, 100%); background: rgba(15, 23, 42, 0.88); border-radius: 28px; padding: 36px 32px; box-shadow: 0 26px 60px rgba(8, 47, 73, 0.45); display: flex; flex-direction: column; gap: 20px; color: #e2e8f0; }
+.superAdminLoginCard h2 { margin: 0; font-size: 26px; color: #f1f5f9; }
+.superAdminLoginCard p { margin: 0; font-size: 15px; color: #94a3b8; }
+.loginMessage { padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; }
+.loginMessage.error { background: rgba(239, 68, 68, 0.15); color: #fecaca; border: 1px solid rgba(239, 68, 68, 0.3); }
+.loginMessage.info { background: rgba(37, 99, 235, 0.2); color: #bfdbfe; border: 1px solid rgba(59, 130, 246, 0.35); }
+.loginForm { display: flex; flex-direction: column; gap: 16px; }
+.loginForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #cbd5f5; font-weight: 600; }
+.loginForm input { background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.35); color: #f8fafc; }
+.loginForm input::placeholder { color: rgba(148, 163, 184, 0.7); }
+.loginHint { margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+.loginHint code { background: rgba(15, 23, 42, 0.6); padding: 2px 6px; border-radius: 6px; font-size: 12px; color: #f8fafc; }
+
+.superAdminLayout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(340px, 420px) 1fr; }
+.superAdminSidebar { background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(16px); padding: 32px 28px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; color: #e2e8f0; }
+.superAdminSidebarHeader h2 { margin: 0; font-size: 24px; color: #f8fafc; }
+.superAdminSidebarHeader p { margin: 6px 0 0; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+.superAdminStatus { padding: 12px 16px; border-radius: 12px; background: rgba(37, 99, 235, 0.18); color: #bfdbfe; border: 1px solid rgba(59, 130, 246, 0.35); font-size: 13px; }
+.superAdminForm { display: flex; flex-direction: column; gap: 14px; }
+.superAdminForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #cbd5f5; font-weight: 600; }
+.superAdminSidebar input,
+.superAdminSidebar textarea { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.4); color: #f8fafc; }
+.superAdminSidebar input::placeholder,
+.superAdminSidebar textarea::placeholder { color: rgba(148, 163, 184, 0.65); }
+.superAdminCoords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+.superAdminCoords strong { display: block; margin-top: 4px; font-size: 15px; color: #f8fafc; letter-spacing: normal; text-transform: none; }
+.superAdminHint { margin: -4px 0 4px; font-size: 12px; color: #94a3b8; }
 .adminForm__actions { display: flex; align-items: center; gap: 12px; }
 .adminForm__actions .spacer { flex: 1; }
 button.primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #fff; padding: 10px 18px; border-radius: 999px; font-weight: 600; cursor: pointer; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25); }
 button.primary:hover { box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35); }
 button.danger { background: rgba(239, 68, 68, 0.15); border: none; color: #ef4444; padding: 10px 16px; border-radius: 999px; font-weight: 600; cursor: pointer; }
 button.danger:hover { background: rgba(239, 68, 68, 0.25); }
-.adminPanel__list { margin-top: 8px; background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 16px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12); }
-.adminPanel__list h4 { margin: 0 0 12px; font-size: 15px; color: #0f172a; }
-.adminPanel__list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.adminPanel__list li { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #334155; }
-.adminPanel__list li div { display: flex; flex-direction: column; }
-.adminPanel__list li span { font-size: 12px; color: #64748b; }
-.adminPanel__list li button { border: none; background: rgba(37, 99, 235, 0.12); color: #1d4ed8; padding: 8px 12px; border-radius: 999px; cursor: pointer; font-weight: 600; }
-.adminPanel__list li button:hover { background: rgba(37, 99, 235, 0.2); }
+button.secondary { background: rgba(148, 163, 184, 0.18); border: 1px solid rgba(148, 163, 184, 0.35); color: #e2e8f0; padding: 10px 18px; border-radius: 999px; font-weight: 600; cursor: pointer; transition: background 0.2s ease; }
+button.secondary:hover { background: rgba(148, 163, 184, 0.28); }
+
+.superAdminList { margin-top: 4px; display: flex; flex-direction: column; gap: 12px; }
+.superAdminListHeader { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.superAdminListHeader h3 { margin: 0; font-size: 16px; color: #f1f5f9; }
+.superAdminListHeader button { border: none; background: rgba(37, 99, 235, 0.18); color: #bfdbfe; padding: 8px 14px; border-radius: 999px; font-weight: 600; cursor: pointer; }
+.superAdminListHeader button:hover { background: rgba(37, 99, 235, 0.28); }
+.superAdminList ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.superAdminList li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: rgba(30, 41, 59, 0.85); border: 1px solid transparent; transition: border-color 0.2s ease, background 0.2s ease; }
+.superAdminList li.active { border-color: rgba(37, 99, 235, 0.45); background: rgba(30, 41, 59, 0.95); }
+.superAdminList li div { display: flex; flex-direction: column; gap: 4px; }
+.superAdminList li strong { font-size: 15px; color: #f8fafc; }
+.superAdminList li span { font-size: 12px; color: #94a3b8; }
+.superAdminList li button { border: none; background: rgba(37, 99, 235, 0.18); color: #bfdbfe; padding: 8px 14px; border-radius: 999px; font-weight: 600; cursor: pointer; }
+.superAdminList li button:hover { background: rgba(37, 99, 235, 0.28); }
+.superAdminEmpty { margin: 0; font-size: 13px; color: #94a3b8; }
+.superAdminEmpty.warning { color: #facc15; }
+
+.superAdminMap { position: relative; min-height: 0; background: rgba(15, 23, 42, 0.8); }
+.superAdminMapCanvas { position: absolute; inset: 0; border-radius: 0 0 0 0; overflow: hidden; }
+.superAdminMapOverlay { position: absolute; bottom: 32px; left: 32px; max-width: 320px; background: rgba(15, 23, 42, 0.88); padding: 18px 20px; border-radius: 18px; box-shadow: 0 20px 45px rgba(8, 47, 73, 0.45); color: #e2e8f0; font-size: 13px; line-height: 1.5; }
+.superAdminMapOverlay strong { display: block; font-size: 15px; margin-bottom: 6px; color: #f8fafc; }
+
+.map-marker.place.active { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35); transform: scale(1.1); }
+
+@media (max-width: 1200px){
+  .superAdminLayout { grid-template-columns: minmax(320px, 380px) 1fr; }
+}
+
+@media (max-width: 960px){
+  .superAdminLayout { grid-template-columns: 1fr; }
+  .superAdminSidebar { order: 2; min-height: 320px; }
+  .superAdminMap { order: 1; height: 420px; }
+  .superAdminMapOverlay { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+}
+
+@media (max-width: 600px){
+  .superAdminHeader { padding: 20px; flex-direction: column; align-items: flex-start; gap: 16px; }
+  .superAdminHeaderActions { width: 100%; justify-content: space-between; }
+  .superAdminLogin { padding: 40px 16px 56px; }
+  .superAdminLoginCard { padding: 28px 24px; }
+}
 
 @media (max-width: 960px){
   .container { grid-template-columns: 1fr; }
