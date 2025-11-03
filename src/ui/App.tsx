@@ -165,7 +165,23 @@ function PublicExplorer({ onOpenAdmin }: PublicExplorerProps){
       zoom: 12
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+
+    const handleResize = () => map.resize()
+    const observerSupported = typeof ResizeObserver !== 'undefined'
+    const resizeObserver = observerSupported && mapRef.current ? new ResizeObserver(handleResize) : null
+    if(resizeObserver && mapRef.current){
+      resizeObserver.observe(mapRef.current)
+    }
+    window.addEventListener('resize', handleResize)
+
     mapInstance.current = map
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      resizeObserver?.disconnect()
+      map.remove()
+      mapInstance.current = null
+    }
   }, [])
 
   useEffect(() => {
